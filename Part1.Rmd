@@ -1,0 +1,30 @@
+---
+title: "Project"
+output: html_document
+date: "2025-05-15"
+---
+
+```{r}
+library(readr,tidytuesdayR)
+```
+
+```         
+```
+
+```         
+```
+
+```{r}
+historical_spending <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2024/2024-02-13/historical_spending.csv', show_col_types = FALSE)
+gifts_age <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2024/2024-02-13/gifts_age.csv', show_col_types = FALSE)
+gifts_gender <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2024/2024-02-13/gifts_gender.csv', show_col_types = FALSE)
+
+```
+
+```{r}
+head(historical_spending, 3)
+```
+
+```{r}
+head(gifts_age, 3)
+```
