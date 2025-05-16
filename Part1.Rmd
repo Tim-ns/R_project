@@ -81,12 +81,18 @@ gift_gender_wide
 gifts_age
 ```
 
+## Dataset's extention
+
+### Compute total average spendings per year
+
 ```{r}
 historical_spending_ext <- historical_spending %>% 
   mutate(AnnualSpending_tot = rowSums(.[,4:ncol(.)]))
 
 historical_spending_ext
 ```
+
+### Compute change in PerPerson spending year-over-year
 
 ```{r}
 historical_spending_ext <- historical_spending_ext %>%
