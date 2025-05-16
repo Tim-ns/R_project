@@ -22,9 +22,84 @@ gifts_gender <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidy
 ```
 
 ```{r}
-head(historical_spending, 3)
+historical_spending
 ```
 
 ```{r}
-head(gifts_age, 3)
+gifts_age
+```
+
+```{r}
+gifts_gender
+```
+
+# EDA
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(skimr)
+library(patchwork)
+library(ggrepel)
+```
+
+```{r}
+glimpse(historical_spending)
+```
+
+```{r}
+skim(historical_spending)
+```
+
+```{r}
+skim(gifts_age)
+```
+
+```{r}
+skim(gifts_gender)
+```
+
+```{r}
+sum(is.na(gifts_age)) 
+```
+
+```{r}
+sum(is.na(historical_spending))
+```
+
+```{r}
+gift_gender_wide <- gifts_gender %>% 
+  pivot_wider(
+    names_from = Gender,
+    values_from = Gender
+  )
+gift_gender_wide
+```
+
+```{r}
+gifts_age
+```
+
+```{r}
+historical_spending_ext <- historical_spending %>% 
+  mutate(AnnualSpending_tot = rowSums(.[,4:ncol(.)]))
+
+historical_spending_ext
+```
+
+```{r}
+historical_spending_ext <- historical_spending_ext %>%
+  arrange(Year) %>% 
+  mutate(SpendingChange = case_when(
+           !is.na(PerPerson) & !is.na(lag(PerPerson)) ~ {
+             change <- (PerPerson - lag(PerPerson)) / lag(PerPerson)
+             ifelse(change > 0, paste0("+", round(change * 100, 2), "%"),
+             paste0(round(change * 100,2), "%"))
+            },
+           TRUE ~ NA_character_
+         )
+         )
+
+historical_spending_ext
 ```
