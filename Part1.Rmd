@@ -87,7 +87,7 @@ gifts_gender
 
 ## historical_spending
 
-### Compute total average spendings per year
+### Compute total average spending per year (AnnualSpending_tot)
 
 ```{r}
 historical_spending_ext <- historical_spending %>% 
@@ -96,12 +96,13 @@ historical_spending_ext <- historical_spending %>%
 historical_spending_ext
 ```
 
-### Compute change in PerPerson spending year-over-year
+### Compute change in PerPerson spending year-over-year (SpendingChange)
 
 ```{r}
 historical_spending_ext <- historical_spending_ext %>%
   arrange(Year) %>% 
   mutate(SpendingChange = case_when(
+           row_number() == 1 ~ "0%",
            !is.na(PerPerson) & !is.na(lag(PerPerson)) ~ {
              change <- (PerPerson - lag(PerPerson)) / lag(PerPerson)
              ifelse(change > 0, paste0("+", round(change * 100, 2), "%"),
@@ -114,9 +115,21 @@ historical_spending_ext <- historical_spending_ext %>%
 historical_spending_ext
 ```
 
+### Find category with the highest spending over the year (HighestSpending)
+
+```{r}
+historical_spending_ext <- historical_spending_ext %>% 
+  mutate(
+    SpendingCols = across(Candy:GiftCards),
+    HighestSpending = names(SpendingCols)[max.col(SpendingCols, ties.method = "first")],
+    SpendingCols = NULL
+  )
+historical_spending_ext
+```
+
 ## gifts_age
 
-### Convert Age to categorical 
+### Convert Age to categorical (Age_cat)
 
 ```{r}
 gifts_age <- gifts_age %>% 
@@ -135,7 +148,7 @@ gifts_age <- gifts_age %>%
 print(gifts_age)
 ```
 
-### Compute total gift spending by age
+### Compute total gift spending by age (GiftSpending_tot)
 
 ```{r}
 gifts_age_ext <- gifts_age %>% 
@@ -144,7 +157,7 @@ gifts_age_ext <- gifts_age %>%
 gifts_age_ext
 ```
 
-### Compute Affinity index between Age and average spending on each category
+### Compute Affinity index between Age and average spending on each category (Affinity\_ )
 
 ```{r}
 spending_tot <- gifts_age %>% 
@@ -166,7 +179,7 @@ gifts_age_ext_wide
    
 ```
 
-### Top 3 Affinity index values
+### Top 3 Affinity index values 
 
 ```{r}
 top_affinities <- gifts_age_ext_wide %>% 
@@ -178,13 +191,9 @@ top_affinities <- gifts_age_ext_wide %>%
 print(top_affinities)
 ```
 
-```{r}
-
-```
-
 ## gifts_gender
 
-### Compute total gift spending by gender
+### Compute total gift spending by gender (GiftSpending_tot)
 
 ```{r}
 gifts_gender_ext <- gifts_gender %>% 
