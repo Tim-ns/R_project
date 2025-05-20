@@ -132,7 +132,7 @@ historical_spending_ext
 ### Convert Age to categorical (Age_cat)
 
 ```{r}
-gifts_age <- gifts_age %>% 
+gifts_age_cat <- gifts_age %>% 
   mutate(
     Age_cat = case_when(
       Age == "18-24" ~ 1,
@@ -145,59 +145,56 @@ gifts_age <- gifts_age %>%
     ),
     .after = Age
   )
-print(gifts_age)
+print(gifts_age_cat)
 ```
 
-### Compute total gift spending by age (GiftSpending_tot)
+### Find category with the highest spending by each group (HighestSpending)
 
 ```{r}
-gifts_age_ext <- gifts_age %>% 
-  mutate(GiftSpending_tot = rowSums(.[,4:ncol(.)]))
-
+gifts_age_ext <- gifts_age_cat %>% 
+  mutate(
+    SpendingCols = across(Candy:GiftCards),
+    HighestSpending = names(SpendingCols)[max.col(SpendingCols, ties.method = "first")],
+    SpendingCols = NULL
+  )
 gifts_age_ext
 ```
 
-### Compute Affinity index between Age and average spending on each category (Affinity\_ )
+### Compute Affinity index between Age and average spending on each category (Affinity\_ ). An Affinity index \>100 indicate that the target group is more likely to purchase some products compare to the average across all age groups
 
 ```{r}
-spending_tot <- gifts_age %>% 
-  summarise(across(Candy:GiftCards, \(x) sum(x)))
-
+overall_cat_relevance <- gifts_age_ext %>% 
+  summarise(across(Candy:GiftCards, ~ mean(.x, na.rm=TRUE))) %>% 
+  pivot_longer(cols=everything(), names_to = "Category", values_to = "OverallRelevance")
 
 gifts_age_affinity <- gifts_age_ext %>% 
-  pivot_longer(cols=Candy:GiftCards, names_to = "Category", values_to = "CategorySpending") %>% 
-  group_by(Age,Category) %>% 
-  summarise(
-    AgeTotalSpending = sum(CategorySpending),
-    AffinityIndex = (AgeTotalSpending / first(SpendingCelebrating)) / 
-      (first(spending_tot[[Category]]) / first(gifts_age$SpendingCelebrating))
+  pivot_longer(cols = Candy:GiftCards, names_to = "Category", values_to = "AgeGroupRelevance") %>% 
+  left_join(overall_cat_relevance, by="Category") %>% 
+  mutate(
+    AffinityIndex = ifelse(
+      OverallRelevance != 0,
+      (AgeGroupRelevance / OverallRelevance) * 100,
+      NA_real_
+    )
   ) %>% 
-  pivot_wider(names_from = Category, values_from = AffinityIndex, names_prefix = "Affinity_")
-gifts_age_ext_wide <- left_join(gifts_age_ext, gifts_age_affinity, by="Age")
+  select(Age, Category, AffinityIndex) %>% 
+  pivot_wider(names_from =Category, values_from = AffinityIndex, names_prefix = "Affinity_")
+
+gifts_age_ext_wide <- left_join(gifts_age_ext, gifts_age_affinity, by = "Age")
 
 gifts_age_ext_wide
-   
-```
-
-### Top 3 Affinity index values 
-
-```{r}
-top_affinities <- gifts_age_ext_wide %>% 
-  pivot_longer(cols=starts_with("Affinity_"), names_to="Category", values_to = "Affinity") %>%
-  slice_max(Affinity, n=3,with_ties = FALSE) %>% 
-  arrange(Age, Category, desc(Affinity)) %>% 
-  select(Age, Category, Affinity) %>% 
-  arrange(desc(Affinity))
-print(top_affinities)
 ```
 
 ## gifts_gender
 
-### Compute total gift spending by gender (GiftSpending_tot)
+### Find category with the highest spending by each gender (HighestSpending)
 
 ```{r}
 gifts_gender_ext <- gifts_gender %>% 
-  mutate(GiftSpending_tot = rowSums(.[,3:ncol(.)]))
-
+  mutate(
+    SpendingCols = across(Candy:GiftCards),
+    HighestSpending = names(SpendingCols)[max.col(SpendingCols, ties.method = "first")],
+    SpendingCols = NULL
+  )
 gifts_gender_ext
 ```
