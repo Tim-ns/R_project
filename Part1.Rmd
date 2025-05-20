@@ -412,3 +412,25 @@ ggplot(historical_spending_ext_long, aes(x=Year, y=AverageSpending, fill=Categor
 #### -  Jewelry and Evening Out represent the largest portions of total spending over the observed period
 
 #### -  Spending on all categories showed limited growth, even experiencing declines, during the 2015-2019 period.
+
+
+
+### Distribution of Spending Across Each Gift Category Over All Years
+
+```{r}
+historical_spending_long_categories <- historical_spending_ext %>%
+  select(Year, Candy:GiftCards) %>%
+  pivot_longer(cols = -Year, names_to = "Category", values_to = "Spending")
+
+ggplot(historical_spending_long_categories, aes(x = Category, y = Spending, fill = Category)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = dollar_format()) +
+  labs(
+    title = "Distribution of Spending Across Gift Categories Over All Years",
+    x = "Gift Category",
+    y = "Spending ($)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
