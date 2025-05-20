@@ -83,7 +83,7 @@ gift_gender_wide
 gifts_gender
 ```
 
-## Dataset's extention
+# Dataset's extention
 
 ## historical_spending
 
@@ -160,7 +160,7 @@ gifts_age_ext <- gifts_age_cat %>%
 gifts_age_ext
 ```
 
-### Compute Affinity index between Age and average spending on each category (Affinity\_ ). An Affinity index \>100 indicate that the target group is more likely to purchase some products compare to the average across all age groups
+### Compute Affinity index between Age and average spending on each category (Affinity\_ ). An Affinity index \>100 indicate that the target group is more likely to purchase some products compared to the average across all age groups
 
 ```{r}
 overall_cat_relevance <- gifts_age_ext %>% 
@@ -199,7 +199,7 @@ gifts_gender_ext <- gifts_gender %>%
 gifts_gender_ext
 ```
 
-### Compute Affinity index between Gender and average spending on each category (Affinity\_ ). An Affinity index \>100 indicate that the target group is more likely to purchase some products compare to the average across all genders 
+### Compute Affinity index between Gender and average spending on each category (Affinity\_ ). An Affinity index \>100 indicate that the target group is more likely to purchase some products compared to the average across all genders
 
 ```{r}
 overall_gender_cat_relevance <- gifts_gender_ext %>% 
@@ -239,3 +239,88 @@ ggplot(gifts_gender_long, aes(x = Category, y = Spending, fill = Gender)) +
   ) +
   scale_fill_brewer(palette = "Set1")
 ```
+
+# Plots
+
+### Affinity Index vs Age Group
+
+```{r}
+age_ordered <- gifts_age_ext_wide %>% 
+  distinct(Age, Age_cat) %>% 
+  arrange(Age_cat) %>% 
+  pull(Age)
+
+gifts_age_affinity_plot <- gifts_age_ext_wide %>% 
+  select(Age, starts_with("Affinity_")) %>% 
+  pivot_longer(
+    cols = starts_with("Affinity_"),
+    names_to = "Category",
+    values_to = "AffinityIndex"
+  ) %>% 
+  mutate(
+    Category = gsub("Affinity_","",Category),
+    Age = factor(Age, levels = age_ordered)
+  )
+
+age_trend <- gifts_age_affinity_plot %>% 
+  group_by(Age) %>% 
+  summarise(AverageAffinityIndex = mean(AffinityIndex, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(Age=factor(Age, levels = age_ordered))
+
+ggplot(gifts_age_affinity_plot, aes(x=Age, y=AffinityIndex)) + 
+  geom_col(aes(fill=Category),position = "dodge") + 
+  geom_hline(yintercept = 100, linetype = "dashed", color="grey50",linewidth=0.8) +
+  geom_line(data = age_trend, aes(x=Age, y=AverageAffinityIndex, group=1), 
+            color ="pink", linetype="solid", linewidth=1.2) +
+  geom_point(data=age_trend, aes(x=Age, y=AverageAffinityIndex, group=1),
+             color="pink", size=3, shape=3, shape=21, fill="black") +
+  theme_minimal() +
+  labs(
+    title = "Affinity Index vs Age Group (By Gift Categories)",
+    y = "Affinity Index",
+    x = "Age Group"
+  ) + 
+  scale_fill_brewer(palette = "Set3") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+```
+
+#### The above plot visualizes the affinity indexes for each category of gifts and age group. We decided to include this plot as it shows the most popular categories of gifts as well as some trends. An Affinity Index above 100 indicates that an age group is more likely to buy that category of gifts compared to the average (100), while below 100 indicates less likelihood.
+
+#### Interpretation:
+
+#### Among the 18- 44 years audience, the most popular categories of gifts are Clothing and Jewerly. For 45+ audience, the most popular category of gifts is Greeting Cards.
+
+#### We may observe the overall trend (pink line) that the percent of people who buy gifts decreases over time.
+
+## Affinity Index vs Gender
+
+```{r}
+gifts_gender_affinity_plot <- gifts_gender_ext_wide %>% 
+  select(Gender, starts_with("Affinity_")) %>% 
+  pivot_longer(
+    cols= starts_with("Affinity_"),
+    names_to = "Category",
+    values_to = "AffinityIndex"
+  ) %>% 
+  mutate(
+    Category = gsub("Affinity_", "", Category),
+    Gender = factor(Gender, levels=c("Men", "Women"))
+  )
+
+ggplot(gifts_gender_affinity_plot, aes(x=Category, y=AffinityIndex, fill=Gender)) + 
+  geom_col(position="dodge") + 
+  geom_hline(yintercept = 100, linetype="dashed", color="grey50", linewidth=0.8) +   theme_minimal() + 
+  labs(
+    title="Affinity Index vs Gift Categories (By Gender)",
+    y = "Affinity Index",
+    x = "Gift Category"
+  ) + 
+  scale_fill_manual(values=c("Men"="steelblue", "Women" = "lightcoral")) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+#### The above plot visualizes the affinity indexes for each category of gifts and gender. We decided to include this plot as it shows the most popular categories of gifts. An Affinity Index above 100 indicates that a gender is more likely to buy that category of gifts compared to the average (100), while below 100 indicates less likelihood.
+
+#### Interpretation: on average, women are more likely to buy gifts with the exception of Flowers and Jewelry. 
