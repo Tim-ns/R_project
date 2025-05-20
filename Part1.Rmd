@@ -198,3 +198,19 @@ gifts_gender_ext <- gifts_gender %>%
   )
 gifts_gender_ext
 ```
+
+```{r}
+### Compare gift spending by gender
+gifts_gender_long <- gifts_gender_ext %>%
+  pivot_longer(cols = -Gender, names_to = "Category", values_to = "Spending")
+
+ggplot(gifts_gender_long, aes(x = Category, y = Spending, fill = Gender)) +
+  geom_col(position = "dodge") +
+  theme_minimal() +
+  labs(
+    title = "Gift Spending by Category and Gender",
+    y = "Spending",
+    x = "Gift Category"
+  ) +
+  scale_fill_brewer(palette = "Set1")
+```
