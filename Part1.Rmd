@@ -290,9 +290,9 @@ ggplot(gifts_age_affinity_plot, aes(x=Age, y=AffinityIndex)) +
 
 #### Interpretation:
 
-#### Among the 18- 44 years audience, the most popular categories of gifts are Clothing and Jewerly. For 45+ audience, the most popular category of gifts is Greeting Cards.
+#### - Among the 18- 44 years audience, the most popular categories of gifts are Clothing and Jewelry. For 45+ audience, the most popular category of gifts is Greeting Cards.
 
-#### We may observe the overall trend (pink line) that the percent of people who buy gifts decreases over time.
+#### - We may observe the overall trend (pink line) that the percent of people who buy gifts decreases over time.
 
 ## Affinity Index vs Gender
 
@@ -323,7 +323,9 @@ ggplot(gifts_gender_affinity_plot, aes(x=Category, y=AffinityIndex, fill=Gender)
 
 #### The above plot visualizes the affinity indexes for each category of gifts and gender. We decided to include this plot as it shows the most popular categories of gifts. An Affinity Index above 100 indicates that a gender is more likely to buy that category of gifts compared to the average (100), while below 100 indicates less likelihood.
 
-#### Interpretation: on average, women are more likely to buy gifts with the exception of Flowers and Jewelry.
+#### Interpretation: 
+
+#### - On average, women are more likely to buy gifts with the exception of Flowers and Jewelry.
 
 ### Change of Total Spending over time
 
@@ -373,4 +375,40 @@ ggplot(historical_spending_adjusted, aes(x = Year, y = SpendingValue, color = Sp
 
 #### Interpretation:
 
-#### Both Nominal and Real Spending lines indicate that there's an overall increase in the actual purchasing power of money spent over time.
+#### - Both Nominal and Real Spending lines indicate that there's an overall increase in the actual purchasing power of money spent over time.
+
+```{r}
+historical_spending_ext_long <- historical_spending_ext %>% 
+  select(1, 4:(ncol(historical_spending_ext) - 3)) %>% 
+  pivot_longer(
+    cols = -Year,
+    names_to = "Category",
+    values_to = "AverageSpending"
+  )
+
+historical_spending_ext_long
+```
+
+### Average Spending per Gift category 
+
+```{r}
+ggplot(historical_spending_ext_long, aes(x=Year, y=AverageSpending, fill=Category)) + 
+  geom_area(alpha=0.8, position = "stack") + 
+  scale_x_continuous(breaks=unique(historical_spending_ext_long$Year)) + 
+  theme_minimal() + 
+  labs(
+    title = "Average Spending per Gift category over Time",
+    y = "Average Spending",
+    x = "Year",
+    fill = "Gift Category"
+  ) + scale_fill_brewer(palette = "Paired") + 
+  theme(plot.title = element_text(hjust=0.5))
+```
+
+#### Stacked area plot appears to be a perfect tool to visualize the proportion of spending on each category of gifts and the overall annual change.
+
+#### Interpretation: 
+
+#### -  Jewelry and Evening Out represent the largest portions of total spending over the observed period
+
+#### -  Spending on all categories showed limited growth, even experiencing declines, during the 2015-2019 period.
