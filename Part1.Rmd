@@ -434,3 +434,50 @@ ggplot(historical_spending_long_categories, aes(x = Category, y = Spending, fill
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none")
 ```
+
+
+
+```{r}
+gifts_age_cat <- gifts_age %>%
+  mutate(
+    Age_cat = case_when(
+      Age == "18-24" ~ 1,
+      Age == "25-34" ~ 2,
+      Age == "35-44" ~ 3,
+      Age == "45-54" ~ 4,
+      Age == "55-64" ~ 5,
+      Age == "65+" ~ 6,
+      TRUE ~ NA_integer_
+    ),
+    .after = Age
+  )
+
+gifts_age_ext <- gifts_age_cat %>%
+  mutate(
+    SpendingCols = across(Candy:GiftCards),
+    HighestSpending = names(SpendingCols)[max.col(SpendingCols, ties.method = "first")],
+    SpendingCols = NULL
+  )
+
+gifts_age_percentages_long_categories <- gifts_age_ext %>%
+  select(Age, Age_cat, Candy:GiftCards) %>% # Select Age and all gift categories
+  pivot_longer(
+    cols = Candy:GiftCards, # Pivot all gift category columns
+    names_to = "Category",
+    values_to = "PercentageOfPeople" # Name the new value column 'PercentageOfPeople'
+  ) %>%
+
+  mutate(Age = factor(Age, levels = unique(gifts_age_ext$Age[order(gifts_age_ext$Age_cat)])))
+
+ggplot(gifts_age_percentages_long_categories, aes(x = Category, y = PercentageOfPeople, fill = Category)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) + # Format Y-axis as percentages
+  labs(
+    title = "Distribution of Percentage of People Spending Across Gift Categories by Age Group",
+    x = "Gift Category",
+    y = "Percentage of People (%)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") # Remove legend as categories are on X-axis
+```
