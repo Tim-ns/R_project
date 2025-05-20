@@ -199,6 +199,31 @@ gifts_gender_ext <- gifts_gender %>%
 gifts_gender_ext
 ```
 
+### Compute Affinity index between Gender and average spending on each category (Affinity\_ ). An Affinity index \>100 indicate that the target group is more likely to purchase some products compare to the average across all genders 
+
+```{r}
+overall_gender_cat_relevance <- gifts_gender_ext %>% 
+  summarise(across(Candy:GiftCards, ~ mean(.x, na.rm=TRUE))) %>% 
+  pivot_longer(cols=everything(), names_to = "Category", values_to = "OverallRelevance")
+
+gifts_gender_affinity <- gifts_gender_ext %>% 
+  pivot_longer(cols = Candy:GiftCards, names_to = "Category", values_to = "GenderRelevance") %>% 
+  left_join(overall_gender_cat_relevance, by="Category") %>% 
+  mutate(
+    AffinityIndex = ifelse(
+      OverallRelevance != 0,
+      (GenderRelevance / OverallRelevance) * 100,
+      NA_real_
+    )
+  ) %>% 
+  select(Gender, Category, AffinityIndex) %>% 
+  pivot_wider(names_from =Category, values_from = AffinityIndex, names_prefix = "Affinity_")
+
+gifts_gender_ext_wide <- left_join(gifts_gender_ext, gifts_gender_affinity, by = "Gender")
+
+gifts_gender_ext_wide
+```
+
 ```{r}
 ### Compare gift spending by gender
 gifts_gender_long <- gifts_gender_ext %>%
