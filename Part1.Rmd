@@ -435,29 +435,12 @@ ggplot(historical_spending_long_categories, aes(x = Category, y = Spending, fill
         legend.position = "none")
 ```
 
+#### This box plot displays the range, median, and variability of actual dollar spending for each specific gift category over all years, serving to highlight which categories consistently involve higher or lower expenditures and their spread.
 
+
+### Gift Category Spending Distribution by Age
 
 ```{r}
-gifts_age_cat <- gifts_age %>%
-  mutate(
-    Age_cat = case_when(
-      Age == "18-24" ~ 1,
-      Age == "25-34" ~ 2,
-      Age == "35-44" ~ 3,
-      Age == "45-54" ~ 4,
-      Age == "55-64" ~ 5,
-      Age == "65+" ~ 6,
-      TRUE ~ NA_integer_
-    ),
-    .after = Age
-  )
-
-gifts_age_ext <- gifts_age_cat %>%
-  mutate(
-    SpendingCols = across(Candy:GiftCards),
-    HighestSpending = names(SpendingCols)[max.col(SpendingCols, ties.method = "first")],
-    SpendingCols = NULL
-  )
 
 gifts_age_percentages_long_categories <- gifts_age_ext %>%
   select(Age, Age_cat, Candy:GiftCards) %>% # Select Age and all gift categories
@@ -481,3 +464,6 @@ ggplot(gifts_age_percentages_long_categories, aes(x = Category, y = PercentageOf
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none") # Remove legend as categories are on X-axis
 ```
+
+#### This box plot visualizes the statistical distribution of the percentage of people who purchase different gift categories, allowing for a clear comparison of varying buying prevalences across those categories within specific age groups.
+
