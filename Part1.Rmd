@@ -224,22 +224,6 @@ gifts_gender_ext_wide <- left_join(gifts_gender_ext, gifts_gender_affinity, by =
 gifts_gender_ext_wide
 ```
 
-```{r}
-### Compare gift spending by gender
-gifts_gender_long <- gifts_gender_ext %>%
-  pivot_longer(cols = -Gender, names_to = "Category", values_to = "Spending")
-
-ggplot(gifts_gender_long, aes(x = Category, y = Spending, fill = Gender)) +
-  geom_col(position = "dodge") +
-  theme_minimal() +
-  labs(
-    title = "Gift Spending by Category and Gender",
-    y = "Spending",
-    x = "Gift Category"
-  ) +
-  scale_fill_brewer(palette = "Set1")
-```
-
 # Plots
 
 ### Affinity Index vs Age Group
@@ -323,7 +307,7 @@ ggplot(gifts_gender_affinity_plot, aes(x=Category, y=AffinityIndex, fill=Gender)
 
 #### The above plot visualizes the affinity indexes for each category of gifts and gender. We decided to include this plot as it shows the most popular categories of gifts. An Affinity Index above 100 indicates that a gender is more likely to buy that category of gifts compared to the average (100), while below 100 indicates less likelihood.
 
-#### Interpretation: 
+#### Interpretation:
 
 #### - On average, women are more likely to buy gifts with the exception of Flowers and Jewelry.
 
@@ -377,6 +361,8 @@ ggplot(historical_spending_adjusted, aes(x = Year, y = SpendingValue, color = Sp
 
 #### - Both Nominal and Real Spending lines indicate that there's an overall increase in the actual purchasing power of money spent over time.
 
+### Average Spending per Gift category
+
 ```{r}
 historical_spending_ext_long <- historical_spending_ext %>% 
   select(1, 4:(ncol(historical_spending_ext) - 3)) %>% 
@@ -387,11 +373,6 @@ historical_spending_ext_long <- historical_spending_ext %>%
   )
 
 historical_spending_ext_long
-```
-
-### Average Spending per Gift category 
-
-```{r}
 ggplot(historical_spending_ext_long, aes(x=Year, y=AverageSpending, fill=Category)) + 
   geom_area(alpha=0.8, position = "stack") + 
   scale_x_continuous(breaks=unique(historical_spending_ext_long$Year)) + 
@@ -407,15 +388,13 @@ ggplot(historical_spending_ext_long, aes(x=Year, y=AverageSpending, fill=Categor
 
 #### Stacked area plot appears to be a perfect tool to visualize the proportion of spending on each category of gifts and the overall annual change.
 
-#### Interpretation: 
+#### Interpretation:
 
-#### -  Jewelry and Evening Out represent the largest portions of total spending over the observed period
+#### - Jewelry and Evening Out represent the largest portions of total spending over the observed period
 
-#### -  Spending on all categories showed limited growth, even experiencing declines, during the 2015-2019 period.
+#### - Spending on all categories showed limited growth, even experiencing declines, during the 2015-2019 period.
 
-
-
-### Distribution of Spending Across Each Gift Category Over All Years
+## Distribution of Spending Across Each Gift Category Over All Years
 
 ```{r}
 historical_spending_long_categories <- historical_spending_ext %>%
@@ -437,24 +416,23 @@ ggplot(historical_spending_long_categories, aes(x = Category, y = Spending, fill
 
 #### This box plot displays the range, median, and variability of actual dollar spending for each specific gift category over all years, serving to highlight which categories consistently involve higher or lower expenditures and their spread.
 
-
-### Gift Category Spending Distribution by Age
+## Gift Category Spending Distribution by Age
 
 ```{r}
 
 gifts_age_percentages_long_categories <- gifts_age_ext %>%
-  select(Age, Age_cat, Candy:GiftCards) %>% # Select Age and all gift categories
+  select(Age, Age_cat, Candy:GiftCards) %>% 
   pivot_longer(
-    cols = Candy:GiftCards, # Pivot all gift category columns
+    cols = Candy:GiftCards, 
     names_to = "Category",
-    values_to = "PercentageOfPeople" # Name the new value column 'PercentageOfPeople'
+    values_to = "PercentageOfPeople"
   ) %>%
 
   mutate(Age = factor(Age, levels = unique(gifts_age_ext$Age[order(gifts_age_ext$Age_cat)])))
 
 ggplot(gifts_age_percentages_long_categories, aes(x = Category, y = PercentageOfPeople, fill = Category)) +
   geom_boxplot() +
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) + # Format Y-axis as percentages
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   labs(
     title = "Distribution of Percentage of People Spending Across Gift Categories by Age Group",
     x = "Gift Category",
@@ -462,8 +440,32 @@ ggplot(gifts_age_percentages_long_categories, aes(x = Category, y = PercentageOf
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "none") # Remove legend as categories are on X-axis
+        legend.position = "none") 
 ```
 
 #### This box plot visualizes the statistical distribution of the percentage of people who purchase different gift categories, allowing for a clear comparison of varying buying prevalences across those categories within specific age groups.
 
+## Percentage of Celebrating by Age Group
+
+```{r}
+ggplot(gifts_age_ext_wide, aes(x=Age, y=SpendingCelebrating)) + 
+  geom_col(fill="steelblue") +
+  geom_text(aes(label=paste0(round(SpendingCelebrating, 1), "%")),
+            vjust= -0.5,
+            color="black",
+            size=3) + 
+  theme_minimal() +
+  labs(
+    title = "Percentage of People Celebrating by Age",
+    y = "Percent of Celebrating",
+    x = "Age Group"
+  ) + 
+  theme(axis.title.x = element_text(angle = 45, hjust=1))
+
+```
+
+#### This plot compares how many individuals from every age group are celebrating Saint Valentine's Day
+
+#### Interpretation:
+
+#### - The 18-24 appears to have the highest percentages of people celebrating, there's a strictly inversed dependency with the age
