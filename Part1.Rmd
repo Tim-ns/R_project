@@ -469,3 +469,11 @@ ggplot(gifts_age_ext_wide, aes(x=Age, y=SpendingCelebrating)) +
 #### Interpretation:
 
 #### - The 18-24 appears to have the highest percentages of people celebrating, there's a strictly inversed dependency with the age
+
+```{r}
+write.csv(gifts_gender_ext_wide, 'gifts_gender_processed.csv')
+```
+
+```{r}
+write.csv(gifts_age_ext_wide, 'gifts_age_processed.csv')
+```

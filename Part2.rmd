@@ -1,0 +1,206 @@
+---
+  title: "Project Part II"
+output: html_document
+date: "2025-05-15"
+---
+
+```{r}
+libs <- c("tidyverse", "tidymodels", "vip", "rpart.plot")
+
+installed_libs <- libs %in% rownames(installed.packages())
+
+if (any(installed_libs == FALSE)) {
+  install.packages(libs[!installed_libs])
+}
+
+# Load libraries
+library(tidyverse)
+library(tidymodels)
+library(vip)          # For variable importance plots
+library(rpart.plot)
+```
+
+```{r}
+gift_gender_processed <- read_csv('gifts_gender_processed.csv')
+gifts_age_processed <- read_csv('gifts_age_processed.csv')
+```
+
+```{r}
+gift_gender_processed <- gift_gender_processed %>% 
+  mutate(Gender = as.factor(Gender))
+levels(gift_gender_processed$Gender)
+
+```
+
+```{r}
+set.seed(314)
+
+gd_split <- initial_split(gift_gender_processed, prop = 0.5)
+
+gd_training <- training(gd_split)
+gd_test <- testing(gd_split)
+```
+
+```{r}
+gifts_age_processed
+```
+
+```{r}
+gifts_age_processed <- gifts_age_processed %>% 
+  mutate(HighestSpending = as.factor(HighestSpending))
+levels(gifts_age_processed$HighestSpending)
+```
+
+```{r}
+set.seed(314)
+
+ga_split <- initial_split(gifts_age_processed, prop = 0.8)
+
+ga_training <- training(ga_split)
+ga_test <- testing(ga_split)
+```
+
+```{r}
+ga_recipe <- recipe(
+  HighestSpending ~ .,
+  data = ga_training
+) %>%
+  step_dummy(all_nominal_predictors(), -all_outcomes(), one_hot = TRUE)
+
+ga_recipe_full <- recipe(
+  HighestSpending ~ .,
+  data = ga_training
+) %>%
+  step_YeoJohnson(all_numeric(), -all_outcomes()) %>%
+  step_normalize(all_numeric(), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+```
+
+```{r}
+prep(ga_recipe_full) %>%
+  bake(new_data = head(ga_training))
+```
+
+```{r}
+tree_spec_tune <- decision_tree(
+  cost_complexity = tune(),
+  tree_depth = tune(),
+  min_n = tune()
+) %>%
+  set_engine("rpart") %>%
+  set_mode("classification")
+
+tree_spec_tune
+```
+
+```{r}
+tree_workflow_tune <- workflow() %>%
+  add_model(tree_spec_tune) %>%
+  add_recipe(ga_recipe_full) 
+
+tree_workflow_tune
+```
+
+```{r}
+tree_grid <- grid_regular(
+  cost_complexity(),
+  tree_depth(),
+  min_n(),
+  levels = 3
+)
+head(tree_grid, 10)
+```
+
+```{r}
+set.seed(314)
+ga_folds <- vfold_cv(ga_training, v = 3, strata = HighestSpending)
+
+cat("Training set dimensions:", dim(ga_training), "\n")
+cat("Testing set dimensions:", dim(ga_test), "\n")
+```
+
+```{r}
+set.seed(314)
+
+tree_tuning_results <- tree_workflow_tune %>%
+  tune_grid(
+    resamples = ga_folds,
+    grid = tree_grid,
+    metrics = metric_set(roc_auc, accuracy)
+  )
+
+tree_tuning_results
+```
+
+```{r}
+# Visualize the tuning results
+autoplot(tree_tuning_results) +
+  labs(title = "Decision Tree Tuning Results")
+```
+
+```{r}
+collect_metrics(tree_tuning_results)
+```
+
+```{r}
+# Show the top 5 best performing hyperparameter combinations
+show_best(tree_tuning_results, metric = "accuracy", n = 3)
+```
+
+```{r}
+# Select the single best set of parameters
+best_tree_params <- select_best(tree_tuning_results, metric = "accuracy")
+
+best_tree_params
+```
+
+```{r}
+final_tree_workflow <- tree_workflow_tune %>%
+  finalize_workflow(best_tree_params)
+
+final_tree_workflow
+```
+
+```{r}
+# Fit the final workflow to the training data
+final_tree_fit <- final_tree_workflow %>%
+  fit(data = ga_training)
+
+# Extract the underlying rpart model object
+final_tree_rpart_fit <- extract_fit_engine(final_tree_fit)
+```
+
+```{r}
+rpart.plot(
+  final_tree_rpart_fit,
+  roundint = FALSE,
+  box.palette = "BuGn", # Color palette for the nodes
+  extra = 104,          # Show class probabilities and counts
+  tweak = 1.2           # Adjust text size
+)
+```
+
+```{r}
+final_tree_parsnip_fit <- extract_fit_parsnip(final_tree_fit)
+
+vip(final_tree_parsnip_fit) +
+  labs(title = "Decision Tree Variable Importance")
+```
+
+```{r}
+final_tree_last_fit <- final_tree_workflow %>%
+  last_fit(ga_split)
+
+
+collect_metrics(final_tree_last_fit)
+```
+
+```{r}
+tree_test_predictions <- collect_predictions(final_tree_last_fit)
+
+
+tree_test_predictions %>%
+  conf_mat(truth = HighestSpending, estimate = .pred_class) %>%
+  autoplot(type = "heatmap") +
+  labs(title = "Decision Tree Confusion Matrix (Test Set)")
+```
