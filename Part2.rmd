@@ -204,3 +204,33 @@ tree_test_predictions %>%
   autoplot(type = "heatmap") +
   labs(title = "Decision Tree Confusion Matrix (Test Set)")
 ```
+
+```{r jewelry-forecast, echo=TRUE, message=FALSE, warning=FALSE}
+# Linear model for predicting jewelry spending
+model <- lm(Jewelry ~ Year, data = historical_spending)
+
+# Create future years for prediction (5 years ahead)
+future_years <- tibble(Year = 2024:2028)
+
+# Predict jewelry spending for future years
+future_years <- future_years %>%
+  mutate(Predicted_Jewelry = predict(model, newdata = future_years))
+
+# Combine historical and predicted data for plotting
+plot_data <- historical_spending %>%
+  select(Year, Jewelry) %>%
+  mutate(Type = "Actual") %>%
+  bind_rows(
+    future_years %>%
+      rename(Jewelry = Predicted_Jewelry) %>%
+      mutate(Type = "Predicted")
+  )
+
+# Plot the data
+ggplot(plot_data, aes(x = Year, y = Jewelry, color = Type)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(title = "Jewelry Spending Forecast",
+       y = "Jewelry Spending (USD)",
+       x = "Year") +
+  theme_minimal()
