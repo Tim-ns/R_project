@@ -234,3 +234,4 @@ ggplot(plot_data, aes(x = Year, y = Jewelry, color = Type)) +
        y = "Jewelry Spending (USD)",
        x = "Year") +
   theme_minimal()
+```
