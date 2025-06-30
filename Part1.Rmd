@@ -481,3 +481,81 @@ write.csv(gifts_age_ext_wide, 'gifts_age_processed.csv')
 ```{r}
 write.csv(historical_spending_ext, 'historical_spending_processed.csv')
 ```
+
+
+
+```{r}
+library(dplyr)
+
+# Add new columns:
+# - Total: total spending across all gift categories
+# - Avg_Gift: average spending per gift category
+gifts_age_ext <- gifts_age %>%
+  mutate(
+    Total = Candy + Flowers + Jewelry + GreetingCards + EveningOut + Clothing + GiftCards,
+    Avg_Gift = Total / 7  # Divide by number of gift types
+  )
+```
+### Description:
+#### This code creates a new version of the gifts_age dataset with additional columns showing total spending on gifts and average gift spending per age group.
+
+
+```{r}
+library(ggplot2)
+
+# Plot average flower spending across age groups
+ggplot(gifts_age_ext, aes(x = Age, y = Flowers, group = 1)) +
+  geom_line(color = "#E63946", size = 1.2) +   # Red line
+  geom_point(color = "#E63946", size = 3) +    # Red dots on each point
+  labs(
+    title = "Average Spending on Flowers by Age Group",
+    x = "Age Group",
+    y = "Average Spending (%)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilt x-axis labels
+```
+### Description:
+#### This line chart visualizes how much different age groups spend on flowers for Valentine's Day. It's great for spotting age-based trends.
+
+
+```{r}
+library(tidyr)
+
+# Reshape the data into long format for easier plotting
+gifts_long <- gifts_age_ext %>%
+  select(Age, Candy, Flowers, Jewelry, GreetingCards, EveningOut, Clothing, GiftCards) %>%
+  pivot_longer(-Age, names_to = "GiftType", values_to = "Spending")
+
+# Create a stacked bar chart by gift type and age group
+ggplot(gifts_long, aes(x = Age, y = Spending, fill = GiftType)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(
+    title = "Valentine's Day Spending by Age Group and Gift Type",
+    x = "Age Group",
+    y = "Spending (%)",
+    fill = "Gift Type"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Description:
+#### This stacked bar chart shows the distribution of gift spending types by age group. Each bar is divided by gift type, showing which categories dominate.
+
+
+```{r}
+# Plot average spending per age group
+ggplot(gifts_age_ext, aes(x = Age, y = Avg_Gift)) +
+  geom_col(fill = "#457B9D") +  # Blue bars
+  labs(
+    title = "Average Gift Spending by Age Group",
+    x = "Age Group",
+    y = "Average Spending (%)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Description:
+#### This bar chart summarizes the average total spending per person in each age group across all gift categories.
