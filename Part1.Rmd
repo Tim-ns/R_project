@@ -490,17 +490,17 @@ gifts_age_ext <- gifts_age %>%
 ```{r}
 library(ggplot2)
 
-# Plot average flower spending across age groups
 ggplot(gifts_age_ext, aes(x = Age, y = Flowers, group = 1)) +
-  geom_line(color = "#E63946", size = 1.2) +   # Red line
-  geom_point(color = "#E63946", size = 3) +    # Red dots on each point
+  geom_line(color = "#E63946", size = 1.2) +
+  geom_point(color = "#E63946", size = 3) +
+  point
   labs(
     title = "Average Spending on Flowers by Age Group",
     x = "Age Group",
     y = "Average Spending (%)"
   ) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilt x-axis labels
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
 ```
 
 ### Description:
