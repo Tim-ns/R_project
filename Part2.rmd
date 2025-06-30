@@ -265,10 +265,6 @@ ggplot(knn_test_predictions_reg, aes(x = Jewelry, y = .pred)) +
   theme_minimal()
 ```
 
-```{r}
-historical_spending_processed
-```
-
 ## Summary
 
 ### 1. Decision Tree for Regression for gifts_age
@@ -287,6 +283,18 @@ historical_spending_processed
 
 -   Interpretation of the results: p-value indicates that 'Year' is significant feature.
 
--   Model's fit assessment: models fit was assessed with multiple and adjusted R2, F-statistics, residual standard error as well as visual inspection of a plot. Our linear regression model explains approximately 56.6 % of the variance in Jewerly based on the Year.
+-   Model's fit assessment: model's fit was assessed with multiple and adjusted R2, F-statistics, residual standard error as well as visual inspection of a plot. Our linear regression model explains approximately 56.6 % of the variance in Jewerly based on the Year.
 
 ### 3. KNN for historical spending
+
+-   This model addresses the problem from Model 2 but with a different approach. The objective is to predict 'Jewerly' but with usage of all variables except the 'Year', 'AnnualSpending_tot', 'HighestSpending', 'SpendingChange'.
+
+-   Interpretation of the results: there's no simple variable importance or p-statistics. KNN computes the average between K nearest neighbors
+
+-   Model's fit assessment: model's fit with RMSE and Rsq metrics as well as 'Predicted vs Actual' plot.
+
+### Models comparison
+
+In this project, we have examined 3 different models, the Linear Regression and Decision Tree showed high interpretability. We approached prediction of 'Jewerly' spending with Linear Regression and KNN Regression with different techniques. KNN Regression has higher R2 however, it would be unfair to compare that metric directly as the dataset is extremely small and KNN is definetly overfitting.
+
+In conclusion, our Linear Regression model stands out for its high interpretability and clear statistical significance, effectively demonstrating a linear trend in 'Jewelry' spending over 'Year'. The Decision Tree, while also highly interpretable, faces significant challenges due to the extremely small dataset used for 'EveningOut' prediction, making its error metrics less reliable. The KNN model offers a different approach to predicting 'Jewelry' spending, focusing on similarity, but sacrifices direct interpretability for potentially complex non-linear relationships.
