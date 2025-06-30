@@ -5,7 +5,7 @@ date: "2025-05-15"
 ---
 
 ```{r}
-libs <- c("tidyverse", "tidymodels", "vip", "rpart.plot")
+libs <- c("tidyverse", "tidymodels", "vip", "rpart.plot", "kknn", "ggplot2")
 
 installed_libs <- libs %in% rownames(installed.packages())
 
@@ -18,206 +18,109 @@ library(tidyverse)
 library(tidymodels)
 library(vip)          # For variable importance plots
 library(rpart.plot)
+library(kknn)
+library(ggplot2)
 ```
 
 ```{r}
 gift_gender_processed <- read_csv('gifts_gender_processed.csv')
 gifts_age_processed <- read_csv('gifts_age_processed.csv')
+historical_spending_processed <- read_csv('historical_spending_processed.csv')
 ```
 
-```{r}
-gift_gender_processed <- gift_gender_processed %>% 
-  mutate(Gender = as.factor(Gender))
-levels(gift_gender_processed$Gender)
-
-```
+### Decision Tree
 
 ```{r}
-set.seed(314)
-
-gd_split <- initial_split(gift_gender_processed, prop = 0.5)
-
-gd_training <- training(gd_split)
-gd_test <- testing(gd_split)
-```
-
-```{r}
-gifts_age_processed
-```
-
-```{r}
-gifts_age_processed <- gifts_age_processed %>% 
-  mutate(HighestSpending = as.factor(HighestSpending))
-levels(gifts_age_processed$HighestSpending)
-```
-
-```{r}
-set.seed(314)
-
-ga_split <- initial_split(gifts_age_processed, prop = 0.8)
-
-ga_training <- training(ga_split)
-ga_test <- testing(ga_split)
-```
-
-```{r}
-ga_recipe <- recipe(
-  HighestSpending ~ .,
-  data = ga_training
+ga_recipe_tree <- recipe(
+  EveningOut ~ ., 
+  data = gifts_age_processed 
 ) %>%
-  step_dummy(all_nominal_predictors(), -all_outcomes(), one_hot = TRUE)
-
-ga_recipe_full <- recipe(
-  HighestSpending ~ .,
-  data = ga_training
-) %>%
-  step_YeoJohnson(all_numeric(), -all_outcomes()) %>%
-  step_normalize(all_numeric(), -all_outcomes()) %>%
-  step_dummy(all_nominal(), -all_outcomes())
+  step_rm(Age, HighestSpending) %>% 
+  step_YeoJohnson(all_numeric_predictors(), -all_outcomes()) %>% 
+  step_normalize(all_numeric_predictors(), -all_outcomes()) 
+prep(ga_recipe_tree) %>%
+  bake(new_data = head(gifts_age_processed))
 ```
 
 ```{r}
-prep(ga_recipe_full) %>%
-  bake(new_data = head(ga_training))
-```
 
-```{r}
-tree_spec_tune <- decision_tree(
-  cost_complexity = tune(),
-  tree_depth = tune(),
-  min_n = tune()
+tree_spec_reg <- decision_tree(
+  cost_complexity = 0.01, 
+  tree_depth = 3,         
+  min_n = 2               
 ) %>%
   set_engine("rpart") %>%
-  set_mode("classification")
+  set_mode("regression")
 
-tree_spec_tune
-```
+print(tree_spec_reg)
 
-```{r}
-tree_workflow_tune <- workflow() %>%
-  add_model(tree_spec_tune) %>%
-  add_recipe(ga_recipe_full) 
+tree_workflow_reg <- workflow() %>%
+  add_model(tree_spec_reg) %>%
+  add_recipe(ga_recipe_tree)
 
-tree_workflow_tune
-```
+print(tree_workflow_reg)
 
-```{r}
-tree_grid <- grid_regular(
-  cost_complexity(),
-  tree_depth(),
-  min_n(),
-  levels = 3
-)
-head(tree_grid, 10)
-```
+fitted_tree_reg <- fit(tree_workflow_reg, data = gifts_age_processed)
 
-```{r}
-set.seed(314)
-ga_folds <- vfold_cv(ga_training, v = 3, strata = HighestSpending)
+print(fitted_tree_reg)
 
-cat("Training set dimensions:", dim(ga_training), "\n")
-cat("Testing set dimensions:", dim(ga_test), "\n")
-```
+final_tree_rpart_fit_simple <- extract_fit_engine(fitted_tree_reg)
 
-```{r}
-set.seed(314)
-
-tree_tuning_results <- tree_workflow_tune %>%
-  tune_grid(
-    resamples = ga_folds,
-    grid = tree_grid,
-    metrics = metric_set(roc_auc, accuracy)
-  )
-
-tree_tuning_results
-```
-
-```{r}
-# Visualize the tuning results
-autoplot(tree_tuning_results) +
-  labs(title = "Decision Tree Tuning Results")
-```
-
-```{r}
-collect_metrics(tree_tuning_results)
-```
-
-```{r}
-# Show the top 5 best performing hyperparameter combinations
-show_best(tree_tuning_results, metric = "accuracy", n = 3)
-```
-
-```{r}
-# Select the single best set of parameters
-best_tree_params <- select_best(tree_tuning_results, metric = "accuracy")
-
-best_tree_params
-```
-
-```{r}
-final_tree_workflow <- tree_workflow_tune %>%
-  finalize_workflow(best_tree_params)
-
-final_tree_workflow
-```
-
-```{r}
-# Fit the final workflow to the training data
-final_tree_fit <- final_tree_workflow %>%
-  fit(data = ga_training)
-
-# Extract the underlying rpart model object
-final_tree_rpart_fit <- extract_fit_engine(final_tree_fit)
 ```
 
 ```{r}
 rpart.plot(
-  final_tree_rpart_fit,
+  final_tree_rpart_fit_simple,
   roundint = FALSE,
-  box.palette = "BuGn", # Color palette for the nodes
-  extra = 104,          # Show class probabilities and counts
-  tweak = 1.2           # Adjust text size
+  box.palette = "BuGn",
+  extra = 1,
+  tweak = 1.2,
+  main = "Decision Tree Regression"
 )
 ```
 
 ```{r}
-final_tree_parsnip_fit <- extract_fit_parsnip(final_tree_fit)
+vip(fitted_tree_reg) +
+  labs(title = "Decision Tree Regression Variable Importance")
 
-vip(final_tree_parsnip_fit) +
-  labs(title = "Decision Tree Variable Importance")
+tree_predictions <- predict(fitted_tree_reg, new_data = gifts_age_processed) %>%
+  bind_cols(gifts_age_processed %>% select(EveningOut)) 
+
+metrics_simple <- tree_predictions %>%
+  metrics(EveningOut, .pred)
+
+print("Metrics on the full 6-record dataset:")
+print(metrics_simple)
 ```
 
 ```{r}
-final_tree_last_fit <- final_tree_workflow %>%
-  last_fit(ga_split)
-
-
-collect_metrics(final_tree_last_fit)
+ggplot(tree_predictions, aes(x = EveningOut, y = .pred)) +
+  geom_point(size = 3) +
+  geom_abline(intercept = 0, slope = 1, linetype = 'dashed', color = 'red') +
+  labs(title = 'Decision Tree Regression: Predicted vs. Actual EveningOut Spending (Full Dataset)',
+       subtitle = 'Model fitted on all 6 records - results prone to overfitting',
+       x = 'Actual EveningOut Spending',
+       y = 'Predicted EveningOut Spending') +
+  theme_minimal()
 ```
+
+### Linear Regression
 
 ```{r}
-tree_test_predictions <- collect_predictions(final_tree_last_fit)
+historical_spending_lm <- historical_spending_processed %>% 
+  select(-AnnualSpending_tot, -HighestSpending)
 
-
-tree_test_predictions %>%
-  conf_mat(truth = HighestSpending, estimate = .pred_class) %>%
-  autoplot(type = "heatmap") +
-  labs(title = "Decision Tree Confusion Matrix (Test Set)")
-```
-
-```{r jewelry-forecast, echo=TRUE, message=FALSE, warning=FALSE}
-# Linear model for predicting jewelry spending
-model <- lm(Jewelry ~ Year, data = historical_spending)
+lr_model <- lm(Jewelry ~ Year, data = historical_spending_lm)
 
 # Create future years for prediction (5 years ahead)
 future_years <- tibble(Year = 2024:2028)
 
 # Predict jewelry spending for future years
 future_years <- future_years %>%
-  mutate(Predicted_Jewelry = predict(model, newdata = future_years))
+  mutate(Predicted_Jewelry = predict(lr_model, newdata = future_years))
 
 # Combine historical and predicted data for plotting
-plot_data <- historical_spending %>%
+plot_data <- historical_spending_lm %>%
   select(Year, Jewelry) %>%
   mutate(Type = "Actual") %>%
   bind_rows(
@@ -235,3 +138,155 @@ ggplot(plot_data, aes(x = Year, y = Jewelry, color = Type)) +
        x = "Year") +
   theme_minimal()
 ```
+
+```{r}
+summary(lr_model)
+```
+
+### KNN Regression
+
+```{r}
+historical_spending_knn <- historical_spending_processed %>%
+  select(-Year, -AnnualSpending_tot, -HighestSpending, -SpendingChange)
+historical_spending_knn
+```
+
+```{r}
+set.seed(314)
+
+hist_split <- initial_split(historical_spending_knn, prop = 0.9)
+
+hist_training <- training(hist_split)
+hist_test <- testing(hist_split)
+cat('Historical spending training set dimensions:', dim(hist_training), '\n')
+cat('Historical spending testing set dimensions:', dim(hist_test), '\n')
+```
+
+```{r}
+hist_recipe <- recipe(
+  Jewelry ~ ., 
+  data = hist_training 
+) %>%
+  step_YeoJohnson(all_numeric_predictors(), -all_outcomes()) %>% 
+  step_normalize(all_numeric_predictors(), -all_outcomes()) 
+```
+
+```{r}
+hist_recipe_prepped <- prep(hist_recipe, training = hist_training)
+baked_hist_training <- bake(hist_recipe_prepped, new_data = hist_training)
+cat('First few rows of baked historical spending training data:\n')
+glimpse(baked_hist_training)
+```
+
+```{r}
+knn_model_spec_reg <- nearest_neighbor(neighbors = tune()) %>% 
+  set_engine('kknn') %>% 
+  set_mode('regression')
+
+knn_model_spec_reg
+```
+
+```{r}
+knn_wf_reg <- workflow() %>%
+  add_model(knn_model_spec_reg) %>%
+  add_recipe(hist_recipe)
+
+knn_wf_reg
+```
+
+```{r}
+k_grid_reg <- tibble(neighbors = c(1, 2))
+k_grid_reg
+```
+
+```{r}
+set.seed(314)
+hist_folds <- vfold_cv(hist_training, v = 2)
+knn_tuning_reg <- tune_grid(
+  knn_wf_reg,
+  resamples = hist_folds,
+  grid = k_grid_reg,
+  metrics = metric_set(rmse, rsq, mae)
+)
+
+knn_tuning_reg
+```
+
+```{r}
+autoplot(knn_tuning_reg) +
+  labs(title = 'KNN Hyperparameter Tuning (Historical Spending Data)',
+       subtitle = 'Performance vs. Number of Neighbors (k)') +
+  theme_light()
+
+```
+
+```{r}
+knn_tuning_reg %>%
+  show_best(metric = 'rmse', n = 3)
+
+best_k_reg <- knn_tuning_reg %>%
+  select_best(metric = 'rmse')
+
+print('Best k for regression:')
+print(best_k_reg)
+```
+
+```{r}
+final_knn_wf_reg <- knn_wf_reg %>%
+  finalize_workflow(best_k_reg)
+
+final_knn_wf_reg
+```
+
+ 
+
+```{r}
+last_fit_knn_reg <- final_knn_wf_reg %>%
+  last_fit(split = hist_split)
+```
+
+```{r}
+last_fit_knn_reg %>%
+  collect_metrics()
+```
+
+```{r}
+knn_test_predictions_reg <- last_fit_knn_reg %>%
+  collect_predictions()
+```
+
+```{r}
+ggplot(knn_test_predictions_reg, aes(x = Jewelry, y = .pred)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = 'dashed', color = 'red') +
+  labs(title = 'KNN Regression: Predicted vs. Actual Jewelry Spending (Test Data)',
+       x = 'Actual Jewerly Spending',
+       y = 'Predicted Jewerly Spending') +
+  theme_minimal()
+```
+
+```{r}
+historical_spending_processed
+```
+
+## Summary
+
+### 1. Decision Tree for Regression for gifts_age
+
+-   'EveningOut' was set as a target variable, 'HighestSpending' feature was removed as it was derived based on comparison of other features including the target variable, so there's no sense to keep it. Prediction of 'EveningOut' variable would be helpful for entertainment places such as cinemas, restaurants, pubs, etc.
+
+-   Interpretation of results: the Decision Tree graph indicates that the target variable primarily relies on the Age Group (set as ...1 on the graph)
+
+-   Model's fit assessment: models fit was assessed with RMSE, Rsq and MAE metrics. Additionally, visualizations such as 'Predicted vs Actual' plot and Variable Importance plots were used.
+
+-   Notes: gifts_age dataset is extremely small, that's why the decision tree was trained and tested on the whole dataset. Otherwise, the model would consist of a single split.
+
+### 2. Linear Regression for historical spending
+
+-   'Jewerly' spending was set a target variable, we used 'Year' as a single dependent feature to detect the time-based trend. Forecasting the jewerly spending would be helpful for the jewerly stores.
+
+-   Interpretation of the results: p-value indicates that 'Year' is significant feature.
+
+-   Model's fit assessment: models fit was assessed with multiple and adjusted R2, F-statistics, residual standard error as well as visual inspection of a plot. Our linear regression model explains approximately 56.6 % of the variance in Jewerly based on the Year.
+
+### 3. KNN for historical spending

@@ -477,3 +477,7 @@ write.csv(gifts_gender_ext_wide, 'gifts_gender_processed.csv')
 ```{r}
 write.csv(gifts_age_ext_wide, 'gifts_age_processed.csv')
 ```
+
+```{r}
+write.csv(historical_spending_ext, 'historical_spending_processed.csv')
+```
